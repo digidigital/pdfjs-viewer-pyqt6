@@ -22,4 +22,4 @@ global-exclude .DS_Store
 
 # Exclude PDF.js demo PDF file (for production - keeps package size smaller)
 # This prevents auto-loading a sample PDF on initialization
-exclude src/pdfjs_viewer/pdfjs/web/compressed.tracemonkey-pldi-09.pdf
+# exclude src/pdfjs_viewer/pdfjs/web/compressed.tracemonkey-pldi-09.pdf

@@ -24,7 +24,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Widget Sets",
     "Operating System :: OS Independent",
-    "Framework :: Qt",
 ]
 keywords = ["pdf", "viewer", "qt", "pyqt6", "pdfjs", "annotation", "widget", "dark-mode", "light-mode"]
 requires-python = ">=3.8"
@@ -64,7 +63,7 @@ where = ["src"]
 pdfjs_viewer = [
     "pdfjs/**/*",
     "templates/*.js",
-    "hooks/*.py",
+    "pyinstaller_hooks/*.py",
 ]
 
 [tool.pytest.ini_options]
