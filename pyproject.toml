@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pdfjs-viewer-pyqt6"
-version = "1.0.1"
+version = "1.1.0"
 description = "PDF.js-based PDF viewer widget for PyQt6 with annotation support"
 readme = "README.md"
 authors = [
@@ -16,28 +16,25 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Widget Sets",
     "Operating System :: OS Independent",
 ]
 keywords = ["pdf", "viewer", "qt", "pyqt6", "pdfjs", "annotation", "widget", "dark-mode", "light-mode"]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "PyQt6>=6.10.0",
     "PyQt6-WebEngine>=6.9.0, !=6.10.0, !=6.10.1, !=6.10.2",
-]
-
-[project.optional-dependencies]
-qt-print = [
     "pypdfium2>=4.0.0",
     "Pillow>=9.0.0",
     "pikepdf>=8.0.0",
 ]
+
+[project.optional-dependencies]
 dev = [
     "pytest>=7.0",
     "pytest-qt>=4.0",
@@ -51,6 +48,9 @@ dev = [
 Homepage = "https://pdfjs-viewer.digidigital.de"
 Repository = "https://github.com/digidigital/pdfjs-viewer-pyqt6"
 "Bug Tracker" = "https://github.com/digidigital/pdfjs-viewer-pyqt6/issues"
+
+[project.entry-points."pyinstaller40"]
+hook-dirs = "pdfjs_viewer.__pyinstaller:get_hook_dirs"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -74,4 +74,4 @@ python_functions = ["test_*"]
 
 [tool.black]
 line-length = 100
-target-version = ['py38', 'py39', 'py310', 'py311']
+target-version = ['py310', 'py311', 'py312', 'py313']

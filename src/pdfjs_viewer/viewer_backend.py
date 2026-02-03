@@ -49,7 +49,7 @@ class ViewerBackend(QObject, metaclass=QABCMeta):
             Args: current_page (int), total_pages (int)
 
         renderer_crashed: Emitted when the renderer process crashes.
-            Note: Only meaningful for in-process backend; multi-process handles transparently.
+            
     """
 
     # Signals that all backends must emit
@@ -159,8 +159,6 @@ class ViewerBackend(QObject, metaclass=QABCMeta):
             error_occurred: On failure
         """
         pass
-
-    @abstractmethod
 
     @abstractmethod
     def get_widget(self):

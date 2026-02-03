@@ -63,7 +63,7 @@ class PDFViewerWidget(QWidget):
         Configuration Priority (highest to lowest):
             1. config parameter (if provided, preset/customize ignored)
             2. preset + customize
-            3. unrestricted preset (default)
+            3. annotation preset (default)
 
         Examples:
             Simple preset usage:
@@ -103,8 +103,8 @@ class PDFViewerWidget(QWidget):
                 else:
                     config = ConfigPresets.get(preset)
             else:
-                # Default: unrestricted preset
-                config = ConfigPresets.unrestricted()
+                # Default: annotation preset
+                config = ConfigPresets.annotation()
 
         # Create in-process backend
         self.backend = InProcessBackend(self)
@@ -135,20 +135,48 @@ class PDFViewerWidget(QWidget):
         pagemode: Optional[str] = None,
         nameddest: Optional[str] = None
     ):
-        """Load a PDF from file path or bytes.
+        """Load a PDF from file path or bytes with optional viewer options.
 
         Args:
-            source: PDF file path (str or Path) or PDF data as bytes.
+            source: PDF file path (str or Path) or PDF data as bytes
+            page: Page number to open (1-indexed, e.g., page=1 opens first page)
+            zoom: Zoom level - named modes ('page-width', 'page-height', 'page-fit', 'auto')
+                  or numeric percentage (10-1000, e.g., 150 for 150%)
+            pagemode: Sidebar state - 'none', 'thumbs', 'bookmarks', or 'attachments'
+            nameddest: Named destination to navigate to (PDF internal destination)
 
         Raises:
             FileNotFoundError: If file path doesn't exist.
             PermissionError: If file cannot be read.
-            ValueError: If source type is invalid.
+            ValueError: If source type or parameters are invalid.
+
+        Examples:
+            Load PDF and open at page 5:
+            >>> viewer.load_pdf("document.pdf", page=5, zoom="page-width")
+
+            Load PDF with bookmarks sidebar:
+            >>> viewer.load_pdf("document.pdf", pagemode="bookmarks")
+
+            Load PDF bytes at specific page:
+            >>> with open("doc.pdf", "rb") as f:
+            ...     viewer.load_pdf(f.read(), page=3, zoom=150)
         """
         if isinstance(source, bytes):
-            self.backend.load_pdf_bytes(source, page, zoom, pagemode, nameddest)
+            self.backend.load_pdf_bytes(
+                source,
+                page=page,
+                zoom=zoom,
+                pagemode=pagemode,
+                nameddest=nameddest
+            )
         elif isinstance(source, (str, Path)):
-            self.backend.load_pdf(str(Path(source)), page, zoom, pagemode, nameddest)
+            self.backend.load_pdf(
+                str(Path(source)),
+                page=page,
+                zoom=zoom,
+                pagemode=pagemode,
+                nameddest=nameddest
+            )
         else:
             raise ValueError(f"Invalid source type: {type(source)}")
 
@@ -159,7 +187,8 @@ class PDFViewerWidget(QWidget):
         page: Optional[int] = None,
         zoom: Optional[Union[str, int, float]] = None,
         pagemode: Optional[str] = None,
-        nameddest: Optional[str] = None):
+        nameddest: Optional[str] = None
+    ):
         """Load a PDF from bytes with optional viewer options.
 
         Args:
@@ -292,12 +321,69 @@ class PDFViewerWidget(QWidget):
         """
         return self.backend.resource_manager.get_pdfjs_version()
 
+    def has_unsaved_changes(self) -> bool:
+        """Check if document has unsaved annotations.
+
+        This checks PDF.js's internal modification tracking, which is:
+        - Set to true when annotations are modified
+        - Reset to false after saveDocument() completes
+
+        Returns:
+            True if there are unsaved changes, False otherwise.
+
+        Example:
+            >>> if viewer.has_unsaved_changes():
+            ...     print("Document has unsaved annotations")
+        """
+        return self.backend.has_unsaved_changes()
+
+    def handle_unsaved_changes(self) -> bool:
+        """Handle unsaved changes according to config.
+
+        Based on the unsaved_changes_action configuration:
+        - "disabled": Returns True immediately (no prompt)
+        - "prompt": Shows dialog with Save As / Save / Discard options
+        - "auto_save": Automatically saves to original file
+
+        The save operation is asynchronous: if a save is needed, this method
+        triggers PDFViewerApplication.download() in JavaScript and returns
+        False. The actual file write happens when the data arrives via the
+        bridge's save_requested signal. After saving, the deferred action
+        (close, load) is executed automatically.
+
+        Returns:
+            True if safe to proceed immediately (no changes, discarded, disabled).
+            False if async save was triggered or Save As was cancelled — caller
+            should NOT proceed (e.g., ignore the close event).
+
+        Example:
+            >>> # In closeEvent:
+            >>> if not viewer.handle_unsaved_changes():
+            ...     event.ignore()  # Save in progress or cancelled
+            ...     return
+        """
+        return self.backend.handle_unsaved_changes()
+
     def closeEvent(self, event):
         """Handle widget close event.
+
+        If unsaved_changes_action is configured, checks for unsaved annotations
+        and prompts the user before closing.
+
+        When an async save is triggered, this method ignores the close event.
+        After the save completes, the backend re-triggers close automatically,
+        and on the second call has_unsaved_changes() returns False, allowing
+        the close to proceed.
 
         Args:
             event: Close event.
         """
+        # Handle unsaved changes before closing
+        # Returns False if async save was triggered or Save As cancelled
+        if not self.backend.handle_unsaved_changes():
+            event.ignore()
+            return
+
         # Use enhanced shutdown sequence if available
         if hasattr(self.backend, '_cleanup_before_shutdown'):
             self.backend._cleanup_before_shutdown()

@@ -11,6 +11,7 @@ Allows switching between handlers at runtime to test each approach.
 import sys
 from pathlib import Path
 
+import pdfjs_viewer
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QComboBox, QLabel, QFileDialog, QTextEdit, QGroupBox,
@@ -342,6 +343,7 @@ class PrintHandlersWindow(QMainWindow):
 
 
 def main():
+    pdfjs_viewer.freeze_support()  # Required for QT_DIALOG in PyInstaller builds
     app = QApplication(sys.argv)
 
     # Set application style

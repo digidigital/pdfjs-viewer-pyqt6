@@ -16,6 +16,7 @@ def configure_global_stability(
     disable_webgl: bool = True,
     disable_gpu_compositing: bool = True,
     single_process: bool = False,
+    disable_unnecessary_features: bool = True,
     extra_args: Optional[List[str]] = None
 ):
     """Configure global WebEngine stability settings.
@@ -23,7 +24,6 @@ def configure_global_stability(
     IMPORTANT: Must be called BEFORE creating QApplication instance.
 
     These settings apply globally to all QWebEngine instances in the application.
-    For per-viewer settings, use PDFStabilityConfig instead.
 
     Args:
         disable_gpu: Disable GPU acceleration (recommended for stability)
@@ -32,6 +32,8 @@ def configure_global_stability(
         disable_webgl: Disable WebGL (major crash source)
         disable_gpu_compositing: Disable GPU compositing
         single_process: Run WebEngine in single process mode (less isolation)
+        disable_unnecessary_features: Disable features not needed for PDF viewing
+                                      (audio, WebRTC, notifications, etc.)
         extra_args: Additional Chromium command line arguments
 
     Example:
@@ -41,14 +43,21 @@ def configure_global_stability(
     """
     args = []
 
+    # GPU and rendering stability
     if disable_gpu:
         args.extend([
             "--disable-gpu",
-            "--disable-software-rasterizer" if disable_software_rasterizer else "",
+            "--disable-gpu-vsync",
+            "--disable-gpu-watchdog",
         ])
+        if disable_software_rasterizer:
+            args.append("--disable-software-rasterizer")
 
     if disable_webgl:
-        args.append("--disable-webgl")
+        args.extend([
+            "--disable-webgl",
+            "--disable-webgl2",
+        ])
 
     if disable_gpu_compositing:
         args.append("--disable-gpu-compositing")
@@ -58,6 +67,42 @@ def configure_global_stability(
 
     if single_process:
         args.append("--single-process")
+
+    # Disable features unnecessary for PDF viewing
+    if disable_unnecessary_features:
+        args.extend([
+            # Performance/Logging
+            "--log-level=0",
+
+            # Network (PDFs are local files)
+            "--disable-background-networking",
+            "--disable-component-update",
+            "--disable-domain-reliability",
+            "--disable-sync",
+            "--no-pings",
+
+            # Media (PDFs don't need audio/video)
+            "--disable-audio-output",
+            "--disable-audio-support",
+            "--disable-speech-api",
+            "--autoplay-policy=document-user-activation-required",
+
+            # WebRTC (major crash source, not needed for PDFs)
+            "--disable-webrtc",
+
+            # UI features (not needed)
+            "--disable-notifications",
+            "--disable-print-preview",
+            "--no-first-run",
+            "--no-default-browser-check",
+
+            # Background processing
+            "--disable-backgrounding-occluded-windows",
+            "--disable-hang-monitor",
+
+            # Smooth scrolling (simpler rendering)
+            "--disable-smooth-scrolling",
+        ])
 
     # Add extra args
     if extra_args:
@@ -99,6 +144,7 @@ def apply_environment_stability():
             disable_gpu=True,
             disable_webgl=True,
             disable_gpu_compositing=True,
+            disable_unnecessary_features=True,
         )
 
     # Check for sandbox disable
@@ -108,51 +154,6 @@ def apply_environment_stability():
         existing_flags = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
         if "--no-sandbox" not in existing_flags:
             os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = f"{existing_flags} --no-sandbox".strip()
-
-
-def get_recommended_stability_config():
-    """Get recommended stability configuration for production use.
-
-    Returns:
-        dict: Configuration dict suitable for PDFStabilityConfig
-    """
-    return {
-        "use_isolated_profile": True,
-        "disable_webgl": True,
-        "disable_gpu": True,
-        "disable_gpu_compositing": True,
-        "disable_cache": True,
-        "disable_local_storage": True,
-        "disable_service_workers": True,
-        "disable_background_networking": True,
-        "safer_mode": True,
-    }
-
-
-def get_maximum_stability_config():
-    """Get maximum stability configuration (most restrictive).
-
-    This configuration disables all non-essential features for maximum stability.
-    Use when crashes are frequent or in production environments.
-
-    Returns:
-        dict: Configuration dict suitable for PDFStabilityConfig
-    """
-    return {
-        "use_isolated_profile": True,
-        "disable_webgl": True,
-        "disable_gpu": True,
-        "disable_gpu_compositing": True,
-        "disable_cache": True,
-        "disable_local_storage": True,
-        "disable_session_storage": True,
-        "disable_databases": True,
-        "disable_service_workers": True,
-        "disable_background_networking": True,
-        "disable_software_rasterizer": False,  # Keep software rendering
-        "max_cache_size_mb": 0,
-        "safer_mode": True,
-    }
 
 
 def print_stability_info():
