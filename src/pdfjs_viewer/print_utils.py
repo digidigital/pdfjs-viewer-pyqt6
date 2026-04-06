@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Tuple
 
-from PyQt6.QtCore import pyqtSignal as Signal, Qt
+from PyQt6.QtCore import pyqtSignal as Signal, Qt, QStandardPaths
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QRadioButton, QButtonGroup, QSpinBox, QPushButton, QGroupBox,
@@ -300,10 +300,16 @@ class CustomPrintDialog(QDialog):
 
     def _browse_output_path(self):
         """Open file dialog to select PDF output path."""
+        current = self.pdf_path_edit.text().strip()
+        if not current:
+            docs = QStandardPaths.writableLocation(
+                QStandardPaths.StandardLocation.DocumentsLocation
+            )
+            current = str(Path(docs) / "document.pdf")
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             self.tr['save_dialog_title'],
-            self.pdf_path_edit.text() or "document.pdf",
+            current,
             self.tr['pdf_files']
         )
 
